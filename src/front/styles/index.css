@@ -1,3 +1,67 @@
-/* 
-    General Styles used on every website (Don't Repeat Yourself)
-*/
+.gradient-background {
+    background-color: #d9eff7;
+  }
+  
+  .full-height {
+    min-height: 100vh;
+  }
+  
+  .home_max-width {
+    max-width: 500px;
+    height: 100vh; /* Esto asegura que el contenedor tenga una altura de 100% de la pantalla */
+    display: flex;
+    flex-direction: column; /* Coloca los elementos en una columna */
+    justify-content: center; /* Centra verticalmente los elementos */
+    align-items: center; /* Centra horizontalmente los elementos */
+  }
+  
+  .waiting-cursor {
+    cursor: wait;
+  }
+  
+  .logo-size {
+    height: 50x;
+    width: 50px;
+  }
+  
+  @media screen and (min-width: 768px) {
+    .logo-size {
+      height: 270px;
+      width: 270px;
+    }
+  }
+  
+  .navbar {
+    background-color: #3c3f42;
+    padding: 15px;
+    width: 100%;
+    margin: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+  }
+  
+  .navbar-brand {
+    font-size: 2.5rem;
+  }
+  
+  .centered {
+    background-color: rgb(225, 248, 230);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    font-size: 5rem;
+  }
+  
+  .centered h1 {
+    font-size: 7rem;
+    margin: 0;
+    color: blue
+  }
+  
+  .home_max-width {
+    margin-top: 80px;
+  }
