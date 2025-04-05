@@ -23,6 +23,7 @@ const getState = ({ getStore, getActions, setStore }) => {
 		registrationWrong: false,
 	  },
 	  actions: {
+		// Setters para estados de registro
 		setRegistrationEmpty: (value) => {
 		  setStore({ registrationEmpty: value });
 		},
@@ -36,17 +37,69 @@ const getState = ({ getStore, getActions, setStore }) => {
 		  setStore({ registrationInProgress: value });
 		},
 		setRegistrationDoesntExist: (value) => {
-		  setStore({ registrationInProgress: value });
+		  setStore({ registrationDoesntExist: value });
 		},
 		setRegistrationWrong: (value) => {
 		  setStore({ registrationWrong: value });
 		},
   
+		// Función de registro mejorada
 		register: async (email, password) => {
-		  const store = getStore();
+			setStore({ 
+			  registrationInProgress: true,
+			  registrationExists: false,
+			  registrationEmpty: false 
+			});
+		  
+			try {
+			  const resp = await fetch(`${process.env.BACKEND_URL}/api/signup`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, password })
+			  });
+		  
+			  const data = await resp.json();
+		  
+			  if (!resp.ok) {
+				let errorMsg = "Registration failed";
+				if (resp.status === 409) {
+				  errorMsg = "User already exists";
+				} else if (resp.status === 500) {
+				  errorMsg = "Server error. Please try again later.";
+				}
+				throw new Error(errorMsg);
+			  }
+		  
+			  setStore({ 
+				registrationSuccess: true,
+				registrationInProgress: false 
+			  });
+			  
+			  return true;
+			  
+			} catch (error) {
+			  console.error("Registration error:", error);
+			  setStore({ 
+				registrationInProgress: false,
+				registrationExists: error.message.includes("already exists")
+			  });
+			  throw error;
+			}
+		  },
+  
+		// Función de login mejorada
+		login: async (email, password) => {
+		  setStore({ 
+			registrationInProgress: true,
+			registrationWrong: false,
+			registrationEmpty: false 
+		  });
   
 		  if (!email || !password) {
-			setStore({ registrationEmpty: true });
+			setStore({ 
+			  registrationEmpty: true,
+			  registrationInProgress: false 
+			});
 			throw new Error("Email and password are required");
 		  }
   
@@ -58,110 +111,80 @@ const getState = ({ getStore, getActions, setStore }) => {
 			body: JSON.stringify({
 			  email: email,
 			  password: password,
-			  is_active: true,
 			}),
 		  };
   
 		  try {
-			const resp = await fetch(
-			  process.env.BACKEND_URL + "/api/user",
-			  requestOptions
-			);
-  
-			if (resp.status !== 200) {
-			  alert("Email or password are wrong");
-			  return false;
-			} else {
-			  setStore({ registrationSuccess: true });
-			}
-  
-			const data = await resp.json();
-			console.log("this came from the backend", data);
-  
-			return true;
-		  } catch (error) {
-			console.log("there has been an error signing up");
-			setStore({ registrationExists: true });
-		  }
-		},
-  
-		login: async (email, password) => {
-		  const store = getStore();
-  
-		  if (!email || !password) {
-			actions.setRegistrationEmpty(true);
-			return false;
-		  }
-  
-		  const requestOptions = {
-			method: "POST",
-			headers: {
-			  "Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-			  email: email,
-			  password: password,
-			}),
-		  };
-  
-		  try {
-			const resp = await fetch(process.env.BACKEND_URL + "/api/token", requestOptions);
-  
-			if (resp.status !== 200) {
-			  actions.setRegistrationWrong(true);
-			  return false;
-			}
-  
+			const resp = await fetch(`${process.env.BACKEND_URL}/api/login`, requestOptions);
 			const data = await resp.json();
   
-			if (data.access_token === undefined) {
-			  actions.setRegistrationWrong(true);
-			  return false;
+			if (!resp.ok) {
+			  setStore({ registrationWrong: true });
+			  throw new Error(data.message || "Login failed");
+			}
+  
+			if (!data.access_token) {
+			  setStore({ registrationWrong: true });
+			  throw new Error("No access token received");
 			}
   
 			sessionStorage.setItem("token", data.access_token);
-			setStore({ token: data.access_token });
-			return true;
+			setStore({ 
+			  token: data.access_token,
+			  registrationInProgress: false,
+			  registrationSuccess: true 
+			});
   
+			return true;
 		  } catch (error) {
-			console.log("Error durante el login", error);
-			actions.setRegistrationWrong(true);
-			return false;
+			console.error("Login error:", error);
+			setStore({ 
+			  registrationInProgress: false,
+			  registrationWrong: true 
+			});
+			throw error;
 		  }
 		},
   
+		// Sincronizar token desde sessionStorage
 		syncTokenFromSessionStore: () => {
 		  const token = sessionStorage.getItem("token");
-		  console.log(
-			"Application just loaded, synching the session storage token"
-		  );
-		  if (token && token != "" && token != undefined)
+		  if (token && token !== "" && token !== undefined) {
 			setStore({ token: token });
+		  }
 		},
   
+		// Función de logout
 		logout: () => {
 		  sessionStorage.removeItem("token");
-		  setStore({ token: null });
-		  setStore({ message: null });
-		  console.log("logged out");
-		  window.location.href = "/";
+		  setStore({ 
+			token: null,
+			message: null,
+			registrationSuccess: false 
+		  });
+		  window.location.href = "/login";
 		},
   
-		getMessage: () => {
+		// Obtener mensaje protegido
+		getMessage: async () => {
 		  const store = getStore();
+		  if (!store.token) return;
   
-		  const requestOptions = {
-			headers: {
-			  Authorization: "Bearer " + store.token,
-			},
-		  };
-  
-		  fetch(process.env.BACKEND_URL + "/api/hello", requestOptions)
-			.then((resp) => resp.json())
-			.then((data) => setStore({ message: data.message }))
-			.catch((error) =>
-			  console.log("Error loading message from backend", error)
-			);
+		  try {
+			const resp = await fetch(`${process.env.BACKEND_URL}/api/hello`, {
+			  headers: {
+				Authorization: `Bearer ${store.token}`,
+			  },
+			});
+			
+			if (!resp.ok) throw new Error("Failed to fetch message");
+			
+			const data = await resp.json();
+			setStore({ message: data.message });
+		  } catch (error) {
+			console.error("Error loading message:", error);
+			actions.logout(); // Cerrar sesión si hay error
+		  }
 		},
 	  },
 	};

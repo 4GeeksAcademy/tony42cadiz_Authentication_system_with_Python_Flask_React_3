@@ -7,92 +7,122 @@ export const Signup = () => {
   const { store, actions } = useContext(Context);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  console.log("this is your token", store.token);
-
-  const handleClick = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setError(null);
+  
     if (!email || !password) {
-      actions.setRegistrationEmpty(true);
-      window.location.href = "/signup";
+      setError("Email and password are required");
       return;
     }
-
-    actions.setRegistrationInProgress(true);
+  
+    setLoading(true);
+  
     try {
-      const registrationSuccess = await actions.register(email, password);
+      const response = await fetch(`${process.env.BACKEND_URL}/api/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
 
-      actions.setRegistrationInProgress(false);
-      if (registrationSuccess) {
-        actions.setRegistrationSuccess(true);
-        window.location.href = "/login";
-      } else {
-        actions.setRegistrationExists(true);
-        window.location.href = "/signup";
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.msg || "Registration failed");
       }
+
+      // Redirigir inmediatamente a login con el email
+      navigate("/login", {
+        state: {
+          registeredEmail: email,
+          registrationSuccess: true
+        }
+      });
+
     } catch (error) {
-      actions.setRegistrationExists(true);
-      actions.setRegistrationInProgress(false);      
+      if (error.message.includes("already exists")) {
+        setError("This email is already registered");
+        setEmail("");
+      } else {
+        setError("Registration error: " + error.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="text-center mt-6 home_max-width container">
-      {!store.registrationSuccess && <h1>Create account</h1>}
+      <h1 className="mb-4">Create account</h1>
 
-      {store.registrationEmpty && (
-        <div className="fs-3">
-          Email and password are required.
-          <br />
-          Try again!
+      {error && (
+        <div className="alert alert-danger">
+          <i className="fas fa-exclamation-circle me-2"></i>
+          {error}
         </div>
       )}
 
-      {store.registrationExists && (
-        <div className="fs-3">
-          Sorry!
-          <br />
-          That user already exists!
-        </div>
-      )}
-
-      {store.registrationSuccess && (
-        <div className="fs-3">
-          You are successfully registered!
-          <br />
-          Now you'll be redirected so you can <b>log in</b>!
-        </div>
-      )}
-
-      <div>
-        <form onSubmit={handleClick}>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-3">
           <input
             type="email"
-            placeholder="email"
+            placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="form-control mt-3"
+            className="form-control"
+            required
+            autoFocus
           />
+        </div>
+
+        <div className="mb-3">
           <input
             type="password"
-            placeholder="password"
+            placeholder="Password (min 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="form-control mt-3"
+            className="form-control"
+            required
+            minLength="6"
           />
-          <button
-            type="submit"
-            className="btn btn-primary mt-5"
-            disabled={store.registrationInProgress}
-          >
-            Sign up
-          </button>
-        </form>
-        <p className="mt-3 mb-5">
-          You already have an account? <Link to="/login"> Log In then </Link>
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn-primary w-100 py-2"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span 
+                className="spinner-border spinner-border-sm me-2" 
+                role="status" 
+                aria-hidden="true"
+              ></span>
+              Creating account...
+            </>
+          ) : (
+            "Sign Up"
+          )}
+        </button>
+      </form>
+
+      <div className="mt-4">
+        <p className="text-muted">
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary">
+            Log in here
+          </Link>
         </p>
       </div>
     </div>

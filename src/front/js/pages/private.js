@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useContext } from "react";
-import PropTypes from "prop-types";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { Context } from "../store/appContext";
 
 export const Private = (props) => {
+  const { store } = useContext(Context);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!store.token) {
+      navigate("/login");
+    }
+  }, [store.token, navigate]);
+
+  if (!store.token) {
+    return null; // O un spinner de carga
+  }
 
   return (
     <div className="centered">
@@ -12,8 +23,4 @@ export const Private = (props) => {
       </h1>
     </div>
   );
-};
-
-Private.propTypes = {
-  match: PropTypes.object,
 };

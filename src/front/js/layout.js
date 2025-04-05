@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import ScrollToTop from "./component/scrollToTop";
 import { BackendURL } from "./component/backendURL";
 import { Context } from "./store/appContext";
@@ -13,6 +13,17 @@ import injectContext from "./store/appContext";
 import { Navbar } from "./component/navbar";
 import { Footer } from "./component/footer";
 
+// Componente para proteger rutas privadas
+const PrivateRoute = ({ children }) => {
+  const { store } = useContext(Context);
+  
+  if (!store.token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
 //create your first component
 const Layout = () => {
   const { store, actions } = useContext(Context);
@@ -22,8 +33,6 @@ const Layout = () => {
 
   if (!process.env.BACKEND_URL || process.env.BACKEND_URL == "")
     return <BackendURL />;
-
-  // /:theid" />
 
   return (
     <div
@@ -40,8 +49,15 @@ const Layout = () => {
             <Route element={<Home />} path="/" />
             <Route element={<Login />} path="/login" />
             <Route element={<Signup />} path="/signup" />
-            <Route element={<Private />} path="/private" />
-            <Route element={<h1>Not found!</h1>} />
+            <Route 
+              element={
+                <PrivateRoute>
+                  <Private />
+                </PrivateRoute>
+              } 
+              path="/private" 
+            />
+            <Route path="*" element={<h1>Not found!</h1>} />
           </Routes>
           <Footer />
         </ScrollToTop>
